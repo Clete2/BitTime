@@ -35,3 +35,5 @@ Package.resolved
 node_modules/
 npm-debug.log
 .npm
+
+.DS_Store

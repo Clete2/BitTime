@@ -11,7 +11,7 @@ This is the open-source distribution of the macOS app. Get the official app on t
 
 ## Features
 
-- Lives in the menu bar (`LSUIElement`).
+- Lives in the menu bar
 - Multiple display formats: 12-hour, 24-hour, Unix, ISO 8601, BCD circles, BCD rectangles.
 - macOS Widgets (small/medium/large) for every format.
 - Spotlight integration (`bittime://` URL scheme).
