@@ -1,0 +1,37 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+
+# Generated Xcode project (regenerated via `xcodegen generate`)
+BitTime.xcodeproj/
+
+# Build artifacts
+*.app
+*.dSYM
+*.zip
+*.dmg
+dist/
+
+# macOS
+.DS_Store
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+.swiftpm/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Node (semantic-release)
+node_modules/
+npm-debug.log
+.npm
