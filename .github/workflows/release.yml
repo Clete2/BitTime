@@ -48,9 +48,19 @@ jobs:
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            test | xcbeautify
+            test 2>&1 | tee xcodebuild.log | xcbeautify
         env:
           NSUnbufferedIO: YES
+
+      - name: Show raw xcodebuild log on failure
+        if: failure()
+        run: |
+          echo "::group::Asset catalog errors"
+          grep -B2 -A20 -iE "actool|asset|\.icon|error:" xcodebuild.log || true
+          echo "::endgroup::"
+          echo "::group::Full xcodebuild.log (tail 500)"
+          tail -n 500 xcodebuild.log || true
+          echo "::endgroup::"
 
       - name: Setup Node
         uses: actions/setup-node@v4
