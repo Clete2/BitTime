@@ -55,6 +55,7 @@ targets:
     deploymentTarget: "13.5"
     sources:
       - path: BitTime
+      - path: BitTime.icon
     dependencies:
       - target: BitTimeCore
         embed: true
