@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/Clete2/BitTime/compare/v1.0.0...v1.0.1) (2026-04-25)
+
+
+### Bug Fixes
+
+* set LSApplicationCategoryType to productivity ([624a0e7](https://github.com/Clete2/BitTime/commit/624a0e7bad5742727fddd9306b198cd1a5b64788))
+
 ## 1.0.0 (2026-04-25)
 
 
