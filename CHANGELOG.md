@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/Clete2/BitTime/compare/v1.0.1...v1.0.2) (2026-04-25)
+
+
+### Bug Fixes
+
+* move BitTime.icon to repo root and declare it explicitly ([1ff0942](https://github.com/Clete2/BitTime/commit/1ff0942380e8a523bf0366917dc59d4cb36a7630))
+
 ## [1.0.1](https://github.com/Clete2/BitTime/compare/v1.0.0...v1.0.1) (2026-04-25)
 
 
