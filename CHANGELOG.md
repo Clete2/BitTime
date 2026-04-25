@@ -1,3 +1,15 @@
+## [1.1.0](https://github.com/Clete2/BitTime/compare/v1.0.2...v1.1.0) (2026-04-25)
+
+
+### Features
+
+* **release:** build universal (x86_64 + arm64) BitTime.app ([b064eaa](https://github.com/Clete2/BitTime/commit/b064eaa93659ea4bb738a58835f3b42dca6e9668))
+
+
+### Bug Fixes
+
+* **ci:** bump Xcode to 26.2 so Icon Composer .icon compiles into the app ([5dcdabc](https://github.com/Clete2/BitTime/commit/5dcdabc58cb170ca2081e880d214e5b5bae418be))
+
 ## [1.0.2](https://github.com/Clete2/BitTime/compare/v1.0.1...v1.0.2) (2026-04-25)
 
 
