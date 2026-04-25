@@ -25,7 +25,12 @@ jobs:
           persist-credentials: true
 
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+        # Xcode 26+ is required to compile Icon Composer .icon bundles
+        # (BitTime.icon) into the app's compiled assets and to inject
+        # CFBundleIconName into Info.plist. Xcode 16.x silently copies
+        # the .icon directory into Resources without registering it as
+        # the app icon, which is why v1.0.2 shipped without an icon.
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app
 
       - name: Install build tools
         run: brew install xcodegen xcbeautify

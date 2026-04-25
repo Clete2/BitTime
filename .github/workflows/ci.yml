@@ -14,7 +14,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+        # Match release.yml: Xcode 26+ is required for Icon Composer .icon support.
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app
 
       - name: Install XcodeGen
         run: brew install xcodegen
