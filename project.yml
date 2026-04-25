@@ -104,7 +104,7 @@ targets:
   BitTimeTests:
     type: bundle.unit-test
     platform: macOS
-    deploymentTarget: "13.5"
+    deploymentTarget: "14.0"
     sources:
       - path: BitTimeTests
     dependencies:

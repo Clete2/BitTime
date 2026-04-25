@@ -6,6 +6,9 @@ on:
   push:
     branches: [master]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   test:
     name: Build & Test
@@ -14,11 +17,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Select Xcode
-        # Match release.yml: Xcode 26+ is required for Icon Composer .icon support.
+        # Xcode 26+ is required for Icon Composer .icon support.
         run: sudo xcode-select -s /Applications/Xcode_26.2.app
 
-      - name: Install XcodeGen
-        run: brew install xcodegen
+      - name: Install build tools
+        run: brew install xcodegen xcbeautify
 
       - name: Generate Xcode project
         run: xcodegen generate
@@ -26,9 +29,6 @@ jobs:
       - name: Build & test
         run: |
           set -o pipefail
-          # Tee the raw xcodebuild output to a log file before xcbeautify so
-          # that on failure we still have actool/clang error messages that
-          # xcbeautify would otherwise swallow.
           xcodebuild \
             -scheme BitTime \
             -configuration Debug \
@@ -36,20 +36,6 @@ jobs:
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            test 2>&1 | tee xcodebuild.log | xcbeautify
+            test 2>&1 | xcbeautify
         env:
           NSUnbufferedIO: YES
-
-      - name: Show raw xcodebuild log on failure
-        if: failure()
-        run: |
-          echo "::group::Asset catalog errors"
-          grep -B2 -A20 -iE "actool|asset|\.icon|error:" xcodebuild.log || true
-          echo "::endgroup::"
-          echo "::group::Full xcodebuild.log (tail 500)"
-          tail -n 500 xcodebuild.log || true
-          echo "::endgroup::"
-
-      - name: Install xcbeautify (if missing)
-        if: failure()
-        run: brew install xcbeautify
