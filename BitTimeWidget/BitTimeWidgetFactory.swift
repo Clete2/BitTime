@@ -9,7 +9,8 @@ struct BitTimeNumericalWidget: Widget {
         UnifiedWidgetFactory.createWidgetConfiguration(
             format: .numerical,
             bcdSymbol: nil,
-            platform: .macOS
+            platform: .macOS,
+            intent: BitTimeWidgetConfigurationIntent.self
         ) { entry in
             BitTimeEntryView(entry: entry)
         }
@@ -22,7 +23,8 @@ struct BitTimeNumerical24Widget: Widget {
         UnifiedWidgetFactory.createWidgetConfiguration(
             format: .numerical24,
             bcdSymbol: nil,
-            platform: .macOS
+            platform: .macOS,
+            intent: BitTimeWidgetConfigurationIntent.self
         ) { entry in
             BitTimeEntryView(entry: entry)
         }
@@ -35,7 +37,8 @@ struct BitTimeUnixWidget: Widget {
         UnifiedWidgetFactory.createWidgetConfiguration(
             format: .unix,
             bcdSymbol: nil,
-            platform: .macOS
+            platform: .macOS,
+            intent: BitTimeWidgetConfigurationIntent.self
         ) { entry in
             BitTimeEntryView(entry: entry)
         }
@@ -48,7 +51,8 @@ struct BitTimeISO8601Widget: Widget {
         UnifiedWidgetFactory.createWidgetConfiguration(
             format: .iso8601,
             bcdSymbol: nil,
-            platform: .macOS
+            platform: .macOS,
+            intent: BitTimeWidgetConfigurationIntent.self
         ) { entry in
             BitTimeEntryView(entry: entry)
         }
@@ -61,7 +65,8 @@ struct BitTimeBCDCirclesWidget: Widget {
         UnifiedWidgetFactory.createWidgetConfiguration(
             format: .bcd,
             bcdSymbol: .circles,
-            platform: .macOS
+            platform: .macOS,
+            intent: BitTimeWidgetConfigurationIntent.self
         ) { entry in
             BitTimeEntryView(entry: entry)
         }
@@ -74,7 +79,8 @@ struct BitTimeBCD24CirclesWidget: Widget {
         UnifiedWidgetFactory.createWidgetConfiguration(
             format: .bcd24,
             bcdSymbol: .circles,
-            platform: .macOS
+            platform: .macOS,
+            intent: BitTimeWidgetConfigurationIntent.self
         ) { entry in
             BitTimeEntryView(entry: entry)
         }
@@ -87,7 +93,8 @@ struct BitTimeBCDRectanglesWidget: Widget {
         UnifiedWidgetFactory.createWidgetConfiguration(
             format: .bcd,
             bcdSymbol: .rectangles,
-            platform: .macOS
+            platform: .macOS,
+            intent: BitTimeWidgetConfigurationIntent.self
         ) { entry in
             BitTimeEntryView(entry: entry)
         }
@@ -100,7 +107,8 @@ struct BitTimeBCD24RectanglesWidget: Widget {
         UnifiedWidgetFactory.createWidgetConfiguration(
             format: .bcd24,
             bcdSymbol: .rectangles,
-            platform: .macOS
+            platform: .macOS,
+            intent: BitTimeWidgetConfigurationIntent.self
         ) { entry in
             BitTimeEntryView(entry: entry)
         }

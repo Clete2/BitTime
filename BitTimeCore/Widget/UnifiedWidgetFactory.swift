@@ -52,23 +52,24 @@ public struct UnifiedWidgetFactory {
         }
     }
     
-    public static func createWidgetConfiguration<EntryView: View>(
+    public static func createWidgetConfiguration<Intent: BitTimeThemeProvidingIntent, EntryView: View>(
         format: ClockFormat,
         bcdSymbol: BCDSymbol?,
         platform: WidgetPlatform,
+        intent: Intent.Type,
         @ViewBuilder entryView: @escaping (BitTimeWidgetEntry) -> EntryView
     ) -> some WidgetConfiguration {
         let kind = BitTimeWidgetConfiguration.widgetKind(
-            for: format, 
-            bcdSymbol: bcdSymbol, 
+            for: format,
+            bcdSymbol: bcdSymbol,
             platform: platformString(for: platform)
         )
         let displayName = BitTimeWidgetConfiguration.widgetDisplayName(for: format, bcdSymbol: bcdSymbol)
-        
+
         return AppIntentConfiguration(
             kind: kind,
-            intent: BitTimeWidgetConfigurationIntent.self,
-            provider: BitTimeWidgetProvider(format: format, bcdSymbol: bcdSymbol)
+            intent: Intent.self,
+            provider: BitTimeWidgetProvider<Intent>(format: format, bcdSymbol: bcdSymbol)
         ) { entry in
             #if os(iOS)
             if #available(iOS 17.0, *) {

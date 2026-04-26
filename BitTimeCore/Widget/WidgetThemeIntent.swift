@@ -2,65 +2,58 @@ import AppIntents
 import WidgetKit
 import Foundation
 
-// MARK: - Widget Theme Option (AppEnum for widget configuration UI)
+// MARK: - Per-extension intent contract
+//
+// NOTE on per-extension intent / AppEnum registration:
+// Apple's widget metadata extractor (`appintentsmetadataprocessor`) only sees
+// AppIntent / AppEnum types that are compiled into the *extension target*
+// itself. Types that live only in a linked framework are NOT picked up, and
+// any `AppIntentConfiguration`-based widget whose intent (or its parameter
+// enums) is not present in the extension's `Metadata.appintents` will fail
+// to render the configuration UI properly (e.g. picker shows no options) or
+// fail to render at all (blank tile).
+//
+// Therefore both the `WidgetConfigurationIntent` struct
+// (`BitTimeWidgetConfigurationIntent`) AND its `WidgetThemeOption` AppEnum
+// are defined per-extension in `BitTimeWidget/AppIntent.swift` and
+// `BitTimeiOSWidget/AppIntent.swift`. They conform to / use the
+// non-AppIntents helpers below so the shared widget factory in this
+// framework can drive them generically.
 
+/// Protocol that the per-extension `WidgetConfigurationIntent` types conform to
+/// so the shared `UnifiedWidgetFactory` / `BitTimeWidgetProvider` can read the
+/// user's chosen theme without itself owning any AppIntents-registered types
+/// (which must live in the extension target for AppIntents metadata extraction).
 @available(iOS 17.0, macOS 14.0, watchOS 10.0, *)
-public enum WidgetThemeOption: String, CaseIterable, AppEnum {
-    case useAppTheme = "Use App Theme"
-    case defaultTheme = "Default"
-    case terminalGreen = "Terminal Green"
-    case terminalAmber = "Terminal Amber"
-    case terminalBlue = "Terminal Blue"
-    case neonPink = "Neon Pink"
-    case electricPurple = "Electric Purple"
-    case custom = "Custom"
-    
-    public static var typeDisplayRepresentation: TypeDisplayRepresentation = "Theme"
-    
-    public static var caseDisplayRepresentations: [WidgetThemeOption: DisplayRepresentation] = [
-        .useAppTheme: "Use App Theme",
-        .defaultTheme: "Default",
-        .terminalGreen: "Terminal Green",
-        .terminalAmber: "Terminal Amber",
-        .terminalBlue: "Terminal Blue",
-        .neonPink: "Neon Pink",
-        .electricPurple: "Electric Purple",
-        .custom: "Custom"
-    ]
-    
-    /// Resolves to the actual Theme enum value.
-    /// For .useAppTheme, reads the current theme from shared UserDefaults.
-    public func resolvedTheme() -> Theme {
-        switch self {
-        case .useAppTheme:
-            return SettingsManager().currentTheme
-        case .defaultTheme:
-            return .default
-        case .terminalGreen:
-            return .terminalGreen
-        case .terminalAmber:
-            return .terminalAmber
-        case .terminalBlue:
-            return .terminalBlue
-        case .neonPink:
-            return .neonPink
-        case .electricPurple:
-            return .electricPurple
-        case .custom:
-            return .custom
-        }
-    }
+public protocol BitTimeThemeProvidingIntent: WidgetConfigurationIntent {
+    /// Resolves the user's selection into a concrete `Theme`.
+    var resolvedTheme: Theme { get }
+    init()
 }
 
-// MARK: - Widget Configuration Intent
-
-@available(iOS 17.0, macOS 14.0, watchOS 10.0, *)
-public struct BitTimeWidgetConfigurationIntent: WidgetConfigurationIntent {
-    public static var title: LocalizedStringResource = "BitTime Theme"
-    public static var description = IntentDescription("Choose the theme for this widget.")
-    
-    @Parameter(title: "Theme", default: .useAppTheme)
-    public var theme: WidgetThemeOption
-    
-    public init() {}
+/// Shared resolver used by the per-extension intents to map their
+/// `WidgetThemeOption` raw value into a concrete `Theme`.
+/// Centralised here so all extensions share the same mapping logic.
+///
+/// Each widget owns its own theme selection. The `.custom` theme is
+/// intentionally not exposed in the open-source build because reading
+/// the user's chosen colour requires the App Groups entitlement, which
+/// requires a paid Apple Developer Program membership to sign.
+public func resolveWidgetTheme(forKey rawValue: String) -> Theme {
+    switch rawValue {
+    case "Default":
+        return .default
+    case "Terminal Green":
+        return .terminalGreen
+    case "Terminal Amber":
+        return .terminalAmber
+    case "Terminal Blue":
+        return .terminalBlue
+    case "Neon Pink":
+        return .neonPink
+    case "Electric Purple":
+        return .electricPurple
+    default:
+        return .default
+    }
 }

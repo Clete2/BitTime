@@ -2,7 +2,6 @@ import WidgetKit
 import SwiftUI
 
 @main
-@available(macOS 14.0, *)
 struct BitTimeWidgetBundle: WidgetBundle {
     @WidgetBundleBuilder
     var body: some Widget {
