@@ -1,3 +1,10 @@
+## [1.2.0](https://github.com/Clete2/BitTime/compare/v1.1.0...v1.2.0) (2026-04-26)
+
+
+### Features
+
+* add per-widget theme selection via AppIntentConfiguration ([02a07af](https://github.com/Clete2/BitTime/commit/02a07afa7f001e8a480e752b0e723ee7ca00500d))
+
 ## [1.1.0](https://github.com/Clete2/BitTime/compare/v1.0.2...v1.1.0) (2026-04-25)
 
 
