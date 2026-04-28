@@ -58,14 +58,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Start timers to update clock and resync every minute
         clockUpdater.startTimers { [weak self] displayTime in
-            self?.updateStatusBarTitle(displayTime: displayTime)
+            self?.paint(displayTime)
         }
         
         // Start Spotlight indexing
         spotlightManager.startIndexing()
         
-        // Hide main window
-        NSApp.setActivationPolicy(.accessory)
+        // Apply Dock icon visibility policy from settings
+        applyDockIconPolicy()
         
         // On first launch, ask the user if they want to start at login
         firstLaunchCoordinator.handleFirstLaunchIfNeeded()
@@ -157,7 +157,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Update the display immediately
         clockUpdater.updateClock { [weak self] displayTime in
-            self?.updateStatusBarTitle(displayTime: displayTime)
+            self?.paint(displayTime)
         }
         
         // Bring app to foreground briefly to show the change
@@ -170,7 +170,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             cachedFontAttributes = nil
             updateFont()
             clockUpdater.updateClock { [weak self] displayTime in
-                self?.updateStatusBarTitle(displayTime: displayTime)
+                self?.paint(displayTime)
             }
         }
     }
@@ -186,14 +186,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func toggleShowSeconds(_ sender: NSMenuItem) {
         settingsManager.showSeconds.toggle()
         clockUpdater.startTimers { [weak self] displayTime in
-            self?.updateStatusBarTitle(displayTime: displayTime)
+            self?.paint(displayTime)
         }
     }
 
     @objc func toggleUseUTC(_ sender: NSMenuItem) {
         settingsManager.useUTC.toggle()
         clockUpdater.updateClock { [weak self] displayTime in
-            self?.updateStatusBarTitle(displayTime: displayTime)
+            self?.paint(displayTime)
         }
     }
 
@@ -203,7 +203,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             cachedFontAttributes = nil
             updateFont()
             clockUpdater.updateClock { [weak self] displayTime in
-                self?.updateStatusBarTitle(displayTime: displayTime)
+                self?.paint(displayTime)
             }
         }
     }
@@ -213,7 +213,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         cachedFontAttributes = nil
         updateFont()
         clockUpdater.updateClock { [weak self] displayTime in
-            self?.updateStatusBarTitle(displayTime: displayTime)
+            self?.paint(displayTime)
         }
     }
 
@@ -223,7 +223,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             cachedFontAttributes = nil
             updateFont()
             clockUpdater.updateClock { [weak self] displayTime in
-                self?.updateStatusBarTitle(displayTime: displayTime)
+                self?.paint(displayTime)
             }
         }
     }
@@ -234,7 +234,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             cachedFontAttributes = nil
             updateFont()
             clockUpdater.updateClock { [weak self] displayTime in
-                self?.updateStatusBarTitle(displayTime: displayTime)
+                self?.paint(displayTime)
             }
             if theme == .custom {
                 showColorPicker(sender)
@@ -268,7 +268,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         settingsManager.customColorBlue = Double(color.blueComponent)
         cachedFontAttributes = nil
         clockUpdater.updateClock { [weak self] displayTime in
-            self?.updateStatusBarTitle(displayTime: displayTime)
+            self?.paint(displayTime)
         }
     }
     
@@ -276,7 +276,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         settingsManager.customGlowEnabled.toggle()
         cachedFontAttributes = nil
         clockUpdater.updateClock { [weak self] displayTime in
-            self?.updateStatusBarTitle(displayTime: displayTime)
+            self?.paint(displayTime)
         }
     }
 
@@ -284,12 +284,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         launchAtLoginManager.isEnabled.toggle()
     }
     
+    @objc func toggleShowDockIcon(_ sender: NSMenuItem) {
+        settingsManager.showDockIcon.toggle()
+        applyDockIconPolicy()
+        if settingsManager.showDockIcon {
+            clockUpdater.updateClock { [weak self] displayTime in
+                self?.paint(displayTime)
+            }
+        } else {
+            clearDockTile()
+        }
+    }
+    
     @objc func restoreDefaults(_ sender: NSMenuItem) {
         settingsManager.resetToDefaults()
         cachedFontAttributes = nil
         updateFont()
+        applyDockIconPolicy()
+        clearDockTile()
         clockUpdater.updateClock { [weak self] displayTime in
-            self?.updateStatusBarTitle(displayTime: displayTime)
+            self?.paint(displayTime)
         }
     }
     
@@ -374,6 +388,181 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Apply the time string with cached attributes (avoids rebuilding attributes every tick)
         button.attributedTitle = NSAttributedString(string: displayTime, attributes: cachedFontAttributes)
+    }
+    
+    private func paint(_ displayTime: String) {
+        updateStatusBarTitle(displayTime: displayTime)
+        updateDockTile(displayTime: displayTime)
+    }
+    
+    // MARK: - Dock Icon
+    
+    private func applyDockIconPolicy() {
+        let policy: NSApplication.ActivationPolicy = settingsManager.showDockIcon ? .regular : .accessory
+        NSApp.setActivationPolicy(policy)
+    }
+    
+    private func clearDockTile() {
+        let dockTile = NSApp.dockTile
+        dockTile.contentView = nil
+        dockTile.display()
+    }
+    
+    private func updateDockTile(displayTime: String) {
+        guard settingsManager.showDockIcon else { return }
+        
+        let dockTile = NSApp.dockTile
+        let tileSize: CGFloat = 128
+        let theme = settingsManager.currentTheme
+        let isBCD = settingsManager.currentFormat == .bcd || settingsManager.currentFormat == .bcd24
+        
+        // Wrap the display string into multiple lines so each glyph can render
+        // as large as possible on the small Dock tile. BCD strings are already
+        // multi-line; for the digit/symbol formats we split by their natural
+        // separators.
+        let lines: [String]
+        if isBCD {
+            lines = displayTime.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        } else {
+            lines = wrapForDockTile(displayTime, format: settingsManager.currentFormat)
+        }
+        
+        let baseFontName: String
+        if isBCD {
+            baseFontName = settingsManager.bcdSymbol.formatting
+                .configuration(forLargeSize: settingsManager.bcdFontSizeLarge).fontName
+        } else {
+            baseFontName = settingsManager.currentFontName
+        }
+        
+        var attributes: [NSAttributedString.Key: Any] = [
+            .foregroundColor: theme.textColor
+        ]
+        
+        if theme.hasGlowEffect {
+            let glowShadow = NSShadow()
+            glowShadow.shadowColor = theme.textColor
+            glowShadow.shadowBlurRadius = 8.0
+            glowShadow.shadowOffset = NSSize(width: 0, height: 0)
+            attributes[.shadow] = glowShadow
+        }
+        
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .center
+        paragraphStyle.lineBreakMode = .byClipping
+        attributes[.paragraphStyle] = paragraphStyle
+        
+        // Compute the largest font size that fits all lines within the tile.
+        // Honor a small horizontal/vertical margin so glow effects don't clip.
+        let margin: CGFloat = 6
+        let availableWidth = tileSize - margin * 2
+        let availableHeight = tileSize - margin * 2
+        let lineCount = max(lines.count, 1)
+        
+        // Start optimistically large and shrink. Cap upper bound by vertical
+        // space — at minimum each line needs a font height ≈ size * 1.15.
+        var fontSize = floor(availableHeight / (CGFloat(lineCount) * 1.05))
+        fontSize = min(fontSize, 96)
+        
+        var font = NSFont(name: baseFontName, size: fontSize)
+            ?? NSFont.monospacedSystemFont(ofSize: fontSize, weight: .bold)
+        
+        // Iteratively shrink until the widest line and total height both fit.
+        for _ in 0..<60 {
+            attributes[.font] = font
+            let widest = lines.map { (line: String) -> CGFloat in
+                let plain = attributes.filter { $0.key != .paragraphStyle }
+                return (line as NSString).size(withAttributes: plain).width
+            }.max() ?? 0
+            let totalHeight = font.ascender - font.descender + font.leading
+            let stackedHeight = totalHeight * CGFloat(lineCount)
+            if (widest <= availableWidth && stackedHeight <= availableHeight) || fontSize <= 8 {
+                break
+            }
+            fontSize -= 1
+            font = NSFont(name: baseFontName, size: fontSize)
+                ?? NSFont.monospacedSystemFont(ofSize: fontSize, weight: .bold)
+        }
+        attributes[.font] = font
+        
+        // Tighten line spacing for BCD so the rows of dots/symbols don't drift
+        // apart at the larger render size.
+        if isBCD {
+            paragraphStyle.maximumLineHeight = fontSize * 1.0
+            paragraphStyle.lineSpacing = -fontSize * 0.05
+            attributes[.kern] = 2.5
+        }
+        
+        let wrapped = lines.joined(separator: "\n")
+        let attributed = NSAttributedString(string: wrapped, attributes: attributes)
+        let textBounds = attributed.boundingRect(
+            with: NSSize(width: availableWidth, height: availableHeight),
+            options: [.usesLineFragmentOrigin, .usesFontLeading]
+        )
+        
+        let image = NSImage(size: NSSize(width: tileSize, height: tileSize))
+        image.lockFocus()
+        let drawRect = NSRect(
+            x: margin,
+            y: (tileSize - textBounds.height) / 2,
+            width: availableWidth,
+            height: textBounds.height
+        )
+        attributed.draw(with: drawRect, options: [.usesLineFragmentOrigin, .usesFontLeading])
+        image.unlockFocus()
+        
+        let imageView = NSImageView(frame: NSRect(x: 0, y: 0, width: tileSize, height: tileSize))
+        imageView.image = image
+        imageView.imageScaling = .scaleProportionallyUpOrDown
+        dockTile.contentView = imageView
+        dockTile.display()
+    }
+    
+    /// Splits a numerical/unix/iso8601 display string into multiple lines so
+    /// the digits can render at a much larger font size on the Dock tile.
+    private func wrapForDockTile(_ s: String, format: ClockFormat) -> [String] {
+        switch format {
+        case .numerical, .numerical24:
+            // "HHHH:MMMMMM:SSSSSS" → one component per line
+            return s.split(separator: ":").map(String.init)
+        case .iso8601:
+            // "YYYY-MM-DD" + "T" + "HH:MM:SS" — group into balanced lines.
+            // The year alone is ~11 binary digits; pair month+day and the
+            // time components onto their own lines so widths stay similar.
+            let parts = s.split(separator: "T", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
+            var out: [String] = []
+            if let date = parts.first {
+                let dateParts = date.split(separator: "-").map(String.init)
+                if let y = dateParts.first { out.append(y) }
+                if dateParts.count >= 3 {
+                    out.append("\(dateParts[1])-\(dateParts[2])")
+                }
+            }
+            if parts.count > 1 {
+                let timeParts = parts[1].split(separator: ":").map(String.init)
+                // Group HH:MM on one line, SS (if present) on another.
+                if timeParts.count >= 2 {
+                    out.append("\(timeParts[0]):\(timeParts[1])")
+                }
+                if timeParts.count >= 3 {
+                    out.append(timeParts[2])
+                }
+            }
+            return out
+        case .unix:
+            // One long binary blob — chunk into lines of ≤8 digits.
+            let chunkSize = 8
+            var out: [String] = []
+            var i = s.startIndex
+            while i < s.endIndex {
+                let j = s.index(i, offsetBy: chunkSize, limitedBy: s.endIndex) ?? s.endIndex
+                out.append(String(s[i..<j]))
+                i = j
+            }
+            return out
+        case .bcd, .bcd24:
+            return s.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        }
     }
     
     @objc func getLaunchAtLoginStatus() -> Bool {

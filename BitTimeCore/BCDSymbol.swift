@@ -35,14 +35,14 @@ public enum BCDSymbol: String, CaseIterable, Codable, Sendable {
                     fontSize: 8.0,
                     lineSpacing: 2.0,
                     lineHeightMultiplier: 0.6,
-                    baselineOffset: -8.0,
+                    baselineOffset: -8.5,
                     fontName: "Menlo"
                 ),
                 large: BCDSizeConfiguration(
                     fontSize: 10.0,
                     lineSpacing: 2.0,
                     lineHeightMultiplier: 0.65,
-                    baselineOffset: -10.5,
+                    baselineOffset: -11.0,
                     fontName: "Menlo"
                 )
             )
@@ -52,14 +52,14 @@ public enum BCDSymbol: String, CaseIterable, Codable, Sendable {
                     fontSize: 14.0,
                     lineSpacing: -5.0,
                     lineHeightMultiplier: 0.4,
-                    baselineOffset: -9.0,
+                    baselineOffset: -9.5,
                     fontName: "Menlo"
                 ),
                 large: BCDSizeConfiguration(
                     fontSize: 16.0,
                     lineSpacing: -4.0,
                     lineHeightMultiplier: 0.45,
-                    baselineOffset: -10.0,
+                    baselineOffset: -10.5,
                     fontName: "Menlo"
                 )
             )
@@ -69,14 +69,14 @@ public enum BCDSymbol: String, CaseIterable, Codable, Sendable {
                     fontSize: 8.0,
                     lineSpacing: 1.0,
                     lineHeightMultiplier: 0.6,
-                    baselineOffset: -8.0,
+                    baselineOffset: -8.5,
                     fontName: "Menlo"
                 ),
                 large: BCDSizeConfiguration(
                     fontSize: 10.0,
                     lineSpacing: 2.0,
                     lineHeightMultiplier: 0.65,
-                    baselineOffset: -10.5,
+                    baselineOffset: -11.0,
                     fontName: "Menlo"
                 )
             )

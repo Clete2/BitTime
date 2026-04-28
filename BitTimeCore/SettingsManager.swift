@@ -111,6 +111,12 @@ public class SettingsManager: ObservableObject {
         }
     }
     
+    @Published public var showDockIcon: Bool {
+        didSet {
+            Self.defaults.set(showDockIcon, forKey: "showDockIcon")
+        }
+    }
+    
     public let availableFonts = ["SF Mono", "Menlo", "Monaco", "Comic Sans MS", "Wingdings"]
     
     public init() {
@@ -190,6 +196,13 @@ public class SettingsManager: ObservableObject {
         } else {
             self.customGlowEnabled = true
         }
+        
+        // Load show dock icon (defaults to false - menu bar only)
+        if defaults.object(forKey: "showDockIcon") != nil {
+            self.showDockIcon = defaults.bool(forKey: "showDockIcon")
+        } else {
+            self.showDockIcon = false
+        }
     }
     
     public func resetToDefaults() {
@@ -206,6 +219,7 @@ public class SettingsManager: ObservableObject {
         customColorGreen = 1.0
         customColorBlue = 1.0
         customGlowEnabled = true
+        showDockIcon = false
     }
     
     // MARK: - Widget Reload
@@ -232,7 +246,7 @@ public class SettingsManager: ObservableObject {
             "clockFormat", "fontName", "showSeconds", "useUTC",
             "bcdSymbol", "symbol", "theme", "bcdFontSizeLarge",
             "customColorRed", "customColorGreen", "customColorBlue",
-            "customGlowEnabled"
+            "customGlowEnabled", "showDockIcon"
         ]
         
         for key in keys {

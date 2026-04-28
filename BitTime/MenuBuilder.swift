@@ -37,6 +37,7 @@ class MenuBuilder: NSObject, NSMenuDelegate {
         }
         menu.addItem(NSMenuItem.separator())
         addLaunchAtLoginMenuItem(to: menu)
+        addShowDockIconMenuItem(to: menu)
         addRestoreDefaultsMenuItem(to: menu)
         menu.addItem(NSMenuItem.separator())
 
@@ -146,6 +147,13 @@ class MenuBuilder: NSObject, NSMenuDelegate {
         launchAtLoginItem.state = delegate?.getLaunchAtLoginStatus() ?? false ? .on : .off
         menu.addItem(launchAtLoginItem)
     }
+    
+    private func addShowDockIconMenuItem(to menu: NSMenu) {
+        let item = NSMenuItem(title: "Show Time in Dock Icon", action: #selector(delegate?.toggleShowDockIcon(_:)), keyEquivalent: "")
+        item.target = delegate
+        item.state = settingsManager.showDockIcon ? .on : .off
+        menu.addItem(item)
+    }
 
     private func addThemeMenuItems(to menu: NSMenu) {
         let themeMenuItem = NSMenuItem(title: "Theme", action: nil, keyEquivalent: "")
@@ -185,5 +193,4 @@ class MenuBuilder: NSObject, NSMenuDelegate {
         resetItem.target = delegate // Target is AppDelegate
         menu.addItem(resetItem)
     }
-
 }
