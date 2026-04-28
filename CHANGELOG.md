@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/Clete2/BitTime/compare/v1.2.0...v1.2.1) (2026-04-28)
+
+
+### Bug Fixes
+
+* default BCD font to small size, add disclaimer on large font menu item ([49b52da](https://github.com/Clete2/BitTime/commit/49b52da62fff590ced32212cab5fc2d7d336da67))
+
 ## [1.2.0](https://github.com/Clete2/BitTime/compare/v1.1.0...v1.2.0) (2026-04-26)
 
 
