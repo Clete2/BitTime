@@ -113,7 +113,7 @@ class MenuBuilder: NSObject, NSMenuDelegate {
     }
 
     private func addBCDFontSizeMenuItem(to menu: NSMenu) {
-        let bcdFontSizeItem = NSMenuItem(title: "Large Font", action: #selector(delegate?.toggleBCDFontSize(_:)), keyEquivalent: "")
+        let bcdFontSizeItem = NSMenuItem(title: "Large Font (may be too large for some screens)", action: #selector(delegate?.toggleBCDFontSize(_:)), keyEquivalent: "")
         bcdFontSizeItem.target = delegate // Target is AppDelegate
         bcdFontSizeItem.state = settingsManager.bcdFontSizeLarge ? .on : .off
         menu.addItem(bcdFontSizeItem)

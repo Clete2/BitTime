@@ -168,11 +168,11 @@ public class SettingsManager: ObservableObject {
             self.currentTheme = .default
         }
         
-        // Load BCD font size (defaults to large)
+        // Load BCD font size (defaults to small)
         if defaults.object(forKey: "bcdFontSizeLarge") != nil {
             self.bcdFontSizeLarge = defaults.bool(forKey: "bcdFontSizeLarge")
         } else {
-            self.bcdFontSizeLarge = true
+            self.bcdFontSizeLarge = false
         }
         
         // Load custom color (defaults to white on all platforms)
@@ -201,7 +201,7 @@ public class SettingsManager: ObservableObject {
         bcdSymbol = .circles
         symbol = .digits
         currentTheme = .default
-        bcdFontSizeLarge = true
+        bcdFontSizeLarge = false
         customColorRed = 1.0
         customColorGreen = 1.0
         customColorBlue = 1.0
