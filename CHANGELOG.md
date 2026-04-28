@@ -1,3 +1,10 @@
+## [1.3.0](https://github.com/Clete2/BitTime/compare/v1.2.1...v1.3.0) (2026-04-28)
+
+
+### Features
+
+* add 'Show Time in Dock Icon' option ([54a7c4b](https://github.com/Clete2/BitTime/commit/54a7c4bf4cb06dcf3f466793bdd1aec0421777dd))
+
 ## [1.2.1](https://github.com/Clete2/BitTime/compare/v1.2.0...v1.2.1) (2026-04-28)
 
 
