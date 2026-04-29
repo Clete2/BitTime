@@ -77,31 +77,32 @@ pulling or after editing `project.yml`.
 
 ## Development
 
+The widget extension must be code-signed to be embedded in the app, so the
+commands below use ad-hoc signing (`-`) rather than disabling signing entirely.
+
 ```bash
 # Generate project after pulling
 xcodegen generate
 
-# Build
+# Build (ad-hoc signed so widgets are embedded)
 xcodebuild -scheme BitTime -configuration Debug \
-  CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+  CODE_SIGN_IDENTITY="-" CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="" build
 
 # Test
 xcodebuild -scheme BitTime -destination 'platform=macOS' \
-  CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO test
+  CODE_SIGN_IDENTITY="-" CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="" test
 ```
 
-## Releases
+### Building a release
 
-Releases are produced automatically by GitHub Actions on every push to `master`
-that includes a [Conventional Commit](https://www.conventionalcommits.org/)
-(`feat:`, `fix:`, `feat!:`, etc.). The workflow:
+Use the build script to produce a universal, ad-hoc signed `BitTime.app`
+zipped into `dist/`:
 
-1. Runs the test suite.
-2. Builds and archives `BitTime.app` (ad-hoc signed).
-3. Zips the app and uploads it to the GitHub Release.
-4. Generates release notes and updates `CHANGELOG.md` via `semantic-release`.
+```bash
+scripts/build-release.sh <version>
+```
 
-Commits without a conventional prefix do not produce a release.
+For example, `scripts/build-release.sh 1.0.0` produces `dist/BitTime-1.0.0.zip`.
 
 ## Contributing
 
