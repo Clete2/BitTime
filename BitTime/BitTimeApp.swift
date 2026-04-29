@@ -26,6 +26,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // Cached attributed string attributes to avoid rebuilding on every tick
     private var cachedFontAttributes: [NSAttributedString.Key: Any]?
 
+    // Dock tile render cache — avoid the per-tick font-fitting loop and
+    // NSImage redraw when nothing visual has changed.
+    private struct DockTileCacheKey: Equatable {
+        let lineCount: Int
+        let baseFontName: String
+        let isBCD: Bool
+        let bcdLargeFont: Bool
+        let glow: Bool
+    }
+    private var dockTileFontCache: (key: DockTileCacheKey, font: NSFont)?
+    private var dockTileLastDrawnTime: String?
+    private var dockTileImageView: NSImageView?
+    private var dockTileImage: NSImage?
+
     // Flash animation properties
     private var flashTimer: Timer?
     private var flashCount = 0
@@ -328,6 +342,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func updateFont() {
         guard let button = statusItem?.button else { return }
+        // Visual params changed — drop dock-tile caches too so the next paint
+        // re-fits the font and re-rasterizes the tile.
+        invalidateDockTileCache()
 
         let fontSize: CGFloat
         let fontName: String
@@ -406,16 +423,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let dockTile = NSApp.dockTile
         dockTile.contentView = nil
         dockTile.display()
+        invalidateDockTileCache()
     }
-    
+
+    private func invalidateDockTileCache() {
+        dockTileFontCache = nil
+        dockTileLastDrawnTime = nil
+        dockTileImage = nil
+        dockTileImageView = nil
+    }
+
     private func updateDockTile(displayTime: String) {
         guard settingsManager.showDockIcon else { return }
-        
+
+        // Fast path: if the visible time hasn't changed since the last draw
+        // (and caches are warm), skip all string measurement, font fitting,
+        // and image rasterization.
+        if dockTileLastDrawnTime == displayTime, dockTileImageView != nil {
+            return
+        }
+
         let dockTile = NSApp.dockTile
         let tileSize: CGFloat = 128
         let theme = settingsManager.currentTheme
         let isBCD = settingsManager.currentFormat == .bcd || settingsManager.currentFormat == .bcd24
-        
+
         // Wrap the display string into multiple lines so each glyph can render
         // as large as possible on the small Dock tile. BCD strings are already
         // multi-line; for the digit/symbol formats we split by their natural
@@ -426,7 +458,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             lines = wrapForDockTile(displayTime, format: settingsManager.currentFormat)
         }
-        
+
         let baseFontName: String
         if isBCD {
             baseFontName = settingsManager.bcdSymbol.formatting
@@ -434,11 +466,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             baseFontName = settingsManager.currentFontName
         }
-        
+
         var attributes: [NSAttributedString.Key: Any] = [
             .foregroundColor: theme.textColor
         ]
-        
+
         if theme.hasGlowEffect {
             let glowShadow = NSShadow()
             glowShadow.shadowColor = theme.textColor
@@ -446,62 +478,92 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             glowShadow.shadowOffset = NSSize(width: 0, height: 0)
             attributes[.shadow] = glowShadow
         }
-        
+
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
         paragraphStyle.lineBreakMode = .byClipping
         attributes[.paragraphStyle] = paragraphStyle
-        
-        // Compute the largest font size that fits all lines within the tile.
+
         // Honor a small horizontal/vertical margin so glow effects don't clip.
         let margin: CGFloat = 6
         let availableWidth = tileSize - margin * 2
         let availableHeight = tileSize - margin * 2
         let lineCount = max(lines.count, 1)
-        
-        // Start optimistically large and shrink. Cap upper bound by vertical
-        // space — at minimum each line needs a font height ≈ size * 1.15.
-        var fontSize = floor(availableHeight / (CGFloat(lineCount) * 1.05))
-        fontSize = min(fontSize, 96)
-        
-        var font = NSFont(name: baseFontName, size: fontSize)
-            ?? NSFont.monospacedSystemFont(ofSize: fontSize, weight: .bold)
-        
-        // Iteratively shrink until the widest line and total height both fit.
-        for _ in 0..<60 {
-            attributes[.font] = font
-            let widest = lines.map { (line: String) -> CGFloat in
-                let plain = attributes.filter { $0.key != .paragraphStyle }
-                return (line as NSString).size(withAttributes: plain).width
-            }.max() ?? 0
-            let totalHeight = font.ascender - font.descender + font.leading
-            let stackedHeight = totalHeight * CGFloat(lineCount)
-            if (widest <= availableWidth && stackedHeight <= availableHeight) || fontSize <= 8 {
-                break
-            }
-            fontSize -= 1
-            font = NSFont(name: baseFontName, size: fontSize)
+
+        // Reuse a cached fitted font when the visual layout hasn't changed.
+        // The fit depends only on (line count, font name, BCD flag, BCD size,
+        // glow), NOT on the actual digits — line widths in monospaced clock
+        // fonts are determined by character count, which is constant for a
+        // given line count. This skips the up-to-60-iteration shrink loop on
+        // every tick.
+        let cacheKey = DockTileCacheKey(
+            lineCount: lineCount,
+            baseFontName: baseFontName,
+            isBCD: isBCD,
+            bcdLargeFont: settingsManager.bcdFontSizeLarge,
+            glow: theme.hasGlowEffect
+        )
+
+        let font: NSFont
+        if let cached = dockTileFontCache, cached.key == cacheKey {
+            font = cached.font
+        } else {
+            // Start optimistically large and shrink. Cap upper bound by vertical
+            // space — at minimum each line needs a font height ≈ size * 1.15.
+            var fontSize = floor(availableHeight / (CGFloat(lineCount) * 1.05))
+            fontSize = min(fontSize, 96)
+
+            var trial = NSFont(name: baseFontName, size: fontSize)
                 ?? NSFont.monospacedSystemFont(ofSize: fontSize, weight: .bold)
+
+            for _ in 0..<60 {
+                attributes[.font] = trial
+                let widest = lines.map { (line: String) -> CGFloat in
+                    let plain = attributes.filter { $0.key != .paragraphStyle }
+                    return (line as NSString).size(withAttributes: plain).width
+                }.max() ?? 0
+                let totalHeight = trial.ascender - trial.descender + trial.leading
+                let stackedHeight = totalHeight * CGFloat(lineCount)
+                if (widest <= availableWidth && stackedHeight <= availableHeight) || fontSize <= 8 {
+                    break
+                }
+                fontSize -= 1
+                trial = NSFont(name: baseFontName, size: fontSize)
+                    ?? NSFont.monospacedSystemFont(ofSize: fontSize, weight: .bold)
+            }
+            font = trial
+            dockTileFontCache = (cacheKey, font)
         }
         attributes[.font] = font
-        
+
         // Tighten line spacing for BCD so the rows of dots/symbols don't drift
         // apart at the larger render size.
         if isBCD {
-            paragraphStyle.maximumLineHeight = fontSize * 1.0
-            paragraphStyle.lineSpacing = -fontSize * 0.05
+            paragraphStyle.maximumLineHeight = font.pointSize * 1.0
+            paragraphStyle.lineSpacing = -font.pointSize * 0.05
             attributes[.kern] = 2.5
         }
-        
+
         let wrapped = lines.joined(separator: "\n")
         let attributed = NSAttributedString(string: wrapped, attributes: attributes)
         let textBounds = attributed.boundingRect(
             with: NSSize(width: availableWidth, height: availableHeight),
             options: [.usesLineFragmentOrigin, .usesFontLeading]
         )
-        
-        let image = NSImage(size: NSSize(width: tileSize, height: tileSize))
-        image.lockFocus()
+
+        // Reuse the backing NSImage so we don't reallocate a 128×128 raster
+        // every tick.
+        let image: NSImage
+        if let existing = dockTileImage {
+            image = existing
+            image.lockFocus()
+            NSGraphicsContext.current?.compositingOperation = .clear
+            NSRect(x: 0, y: 0, width: tileSize, height: tileSize).fill()
+            NSGraphicsContext.current?.compositingOperation = .sourceOver
+        } else {
+            image = NSImage(size: NSSize(width: tileSize, height: tileSize))
+            image.lockFocus()
+        }
         let drawRect = NSRect(
             x: margin,
             y: (tileSize - textBounds.height) / 2,
@@ -510,12 +572,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
         attributed.draw(with: drawRect, options: [.usesLineFragmentOrigin, .usesFontLeading])
         image.unlockFocus()
-        
-        let imageView = NSImageView(frame: NSRect(x: 0, y: 0, width: tileSize, height: tileSize))
-        imageView.image = image
-        imageView.imageScaling = .scaleProportionallyUpOrDown
-        dockTile.contentView = imageView
+        dockTileImage = image
+
+        // Reuse the NSImageView too — only attach to the dock tile once.
+        if let view = dockTileImageView {
+            view.image = image
+            view.needsDisplay = true
+        } else {
+            let view = NSImageView(frame: NSRect(x: 0, y: 0, width: tileSize, height: tileSize))
+            view.image = image
+            view.imageScaling = .scaleProportionallyUpOrDown
+            dockTileImageView = view
+            dockTile.contentView = view
+        }
         dockTile.display()
+        dockTileLastDrawnTime = displayTime
     }
     
     /// Splits a numerical/unix/iso8601 display string into multiple lines so
