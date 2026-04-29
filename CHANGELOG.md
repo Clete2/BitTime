@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/Clete2/BitTime/compare/v1.3.0...v1.3.1) (2026-04-29)
+
+
+### Performance Improvements
+
+* cache dock-tile font fitting and reuse image/view ([124b195](https://github.com/Clete2/BitTime/commit/124b195d94adcbb8c4faf539ee18c70d96343fdd))
+
 ## [1.3.0](https://github.com/Clete2/BitTime/compare/v1.2.1...v1.3.0) (2026-04-28)
 
 
