@@ -1,58 +1,50 @@
-
 import Foundation
+import os
 
 public class ClockUpdater {
-    private var timer: Timer?
-    private var resyncTimer: Timer?
+    /// Small offset added to the initial alignment delay so the timer fires
+    /// just after the second/minute boundary rather than risking firing a hair
+    /// before it (which would display the same second twice).
+    private static let alignmentBump: TimeInterval = 0.005
+
+    /// Tolerance allowed on the repeating tick. Per Apple's Timer docs, giving
+    /// the system tolerance lets it coalesce timers and conserve power.
+    private static let tickTolerance: TimeInterval = 0.1
+
     private var alignmentTimer: Timer?
+    private var timer: Timer?
     private var settingsManager: SettingsManager
-    
+
     public init(settingsManager: SettingsManager) {
         self.settingsManager = settingsManager
     }
-    
+
     public func invalidateAllTimers() {
-        timer?.invalidate()
-        timer = nil
-        resyncTimer?.invalidate()
-        resyncTimer = nil
         alignmentTimer?.invalidate()
         alignmentTimer = nil
+        timer?.invalidate()
+        timer = nil
     }
-    
+
     public func startTimers(updateHandler: @escaping (String) -> Void) {
         invalidateAllTimers()
         updateClock(updateHandler: updateHandler)
-        let now = Date()
-        
-        if settingsManager.showSeconds {
-            let nextSecond = now.addingTimeInterval(1.0 - now.timeIntervalSince1970.truncatingRemainder(dividingBy: 1.0))
-            let delay = max(0, nextSecond.timeIntervalSinceNow)
-            
-            alignmentTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
-                self?.alignmentTimer = nil
+
+        let interval: TimeInterval = settingsManager.showSeconds ? 1.0 : 60.0
+        let delay = delayUntilNextBoundary(interval: interval) + Self.alignmentBump
+
+        alignmentTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+            guard let self else { return }
+            self.alignmentTimer = nil
+            self.updateClock(updateHandler: updateHandler)
+            let repeating = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
                 self?.updateClock(updateHandler: updateHandler)
-                self?.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-                    self?.updateClock(updateHandler: updateHandler)
-                }
             }
-        } else {
-            let calendar = Calendar.current
-            guard let nextMinute = calendar.nextDate(after: now, matching: DateComponents(second: 0), matchingPolicy: .nextTime) else {
-                // Fallback: align to next minute manually
-                let currentSecond = calendar.component(.second, from: now)
-                let delay = TimeInterval(60 - currentSecond)
-                scheduleMinuteTimer(delay: delay, updateHandler: updateHandler)
-                return
-            }
-            
-            let delay = max(0, nextMinute.timeIntervalSinceNow)
-            scheduleMinuteTimer(delay: delay, updateHandler: updateHandler)
+            repeating.tolerance = Self.tickTolerance
+            self.timer = repeating
         }
-        
-        scheduleResyncTimer(updateHandler: updateHandler)
     }
-    
+
     public func updateClock(updateHandler: (String) -> Void) {
         let now = Date()
         let displayTime: String = {
@@ -73,55 +65,12 @@ public class ClockUpdater {
         }()
         updateHandler(displayTime)
     }
-    
-    private func scheduleMinuteTimer(delay: TimeInterval, updateHandler: @escaping (String) -> Void) {
-        alignmentTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
-            self?.alignmentTimer = nil
-            self?.updateClock(updateHandler: updateHandler)
-            self?.timer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
-                self?.updateClock(updateHandler: updateHandler)
-            }
-        }
-    }
-    
-    private func scheduleResyncTimer(updateHandler: @escaping (String) -> Void) {
-        let resyncInterval: TimeInterval = settingsManager.showSeconds ? 60.0 : 300.0
-        resyncTimer = Timer.scheduledTimer(withTimeInterval: resyncInterval, repeats: true) { [weak self] _ in
-            self?.realignTimers(updateHandler: updateHandler)
-        }
-    }
-    
-    private func realignTimers(updateHandler: @escaping (String) -> Void) {
-        // Stop current timers but keep resync timer running
-        timer?.invalidate()
-        timer = nil
-        alignmentTimer?.invalidate()
-        alignmentTimer = nil
-        
-        // Restart alignment without creating new resync timer
-        let now = Date()
-        if settingsManager.showSeconds {
-            let nextSecond = now.addingTimeInterval(1.0 - now.timeIntervalSince1970.truncatingRemainder(dividingBy: 1.0))
-            let delay = max(0, nextSecond.timeIntervalSinceNow)
-            
-            alignmentTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
-                self?.alignmentTimer = nil
-                self?.updateClock(updateHandler: updateHandler)
-                self?.timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-                    self?.updateClock(updateHandler: updateHandler)
-                }
-            }
-        } else {
-            let calendar = Calendar.current
-            guard let nextMinute = calendar.nextDate(after: now, matching: DateComponents(second: 0), matchingPolicy: .nextTime) else {
-                let currentSecond = calendar.component(.second, from: now)
-                let delay = TimeInterval(60 - currentSecond)
-                scheduleMinuteTimer(delay: delay, updateHandler: updateHandler)
-                return
-            }
-            
-            let delay = max(0, nextMinute.timeIntervalSinceNow)
-            scheduleMinuteTimer(delay: delay, updateHandler: updateHandler)
-        }
+
+    /// Returns the time interval until the next clean boundary for the given
+    /// repeat interval (1s → next whole second; 60s → next whole minute).
+    private func delayUntilNextBoundary(interval: TimeInterval) -> TimeInterval {
+        let nowEpoch = Date().timeIntervalSince1970
+        let remainder = nowEpoch.truncatingRemainder(dividingBy: interval)
+        return interval - remainder
     }
 }
