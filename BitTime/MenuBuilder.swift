@@ -21,6 +21,7 @@ class MenuBuilder: NSObject, NSMenuDelegate {
         menu.addItem(NSMenuItem.separator())
         addShowSecondsMenuItem(to: menu)
         addUseUTCMenuItem(to: menu)
+        addPreciseTimeMenuItem(to: menu)
         menu.addItem(NSMenuItem.separator())
         
         // Only show font menu for non-BCD formats, show BCD symbol menu for BCD
@@ -73,6 +74,14 @@ class MenuBuilder: NSObject, NSMenuDelegate {
         useUTCItem.target = delegate // Target is AppDelegate
         useUTCItem.state = settingsManager.useUTC ? .on : .off
         menu.addItem(useUTCItem)
+    }
+
+    private func addPreciseTimeMenuItem(to menu: NSMenu) {
+        let item = NSMenuItem(title: "Precise time (hover for explanation)", action: #selector(delegate?.togglePreciseTime(_:)), keyEquivalent: "")
+        item.target = delegate
+        item.state = settingsManager.preciseTime ? .on : .off
+        item.toolTip = "Forces the clock to update exactly on each second boundary by removing the timer tolerance that macOS normally uses to coalesce timers and conserve power. Leaving this off lets the system delay ticks by up to 100ms to save battery. Note that updates still fire 5ms past each second to avoid accidentally updating twice in one second due to small timing inconsistencies on macOS."
+        menu.addItem(item)
     }
 
     private func addFontMenuItems(to menu: NSMenu) {

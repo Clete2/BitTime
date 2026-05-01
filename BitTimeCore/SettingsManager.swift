@@ -116,6 +116,12 @@ public class SettingsManager: ObservableObject {
             Self.defaults.set(showDockIcon, forKey: "showDockIcon")
         }
     }
+
+    @Published public var preciseTime: Bool {
+        didSet {
+            Self.defaults.set(preciseTime, forKey: "preciseTime")
+        }
+    }
     
     public let availableFonts = ["SF Mono", "Menlo", "Monaco", "Comic Sans MS", "Wingdings"]
     
@@ -203,6 +209,13 @@ public class SettingsManager: ObservableObject {
         } else {
             self.showDockIcon = false
         }
+
+        // Load precise time (defaults to false - power-friendly tick coalescing)
+        if defaults.object(forKey: "preciseTime") != nil {
+            self.preciseTime = defaults.bool(forKey: "preciseTime")
+        } else {
+            self.preciseTime = false
+        }
     }
     
     public func resetToDefaults() {
@@ -220,6 +233,7 @@ public class SettingsManager: ObservableObject {
         customColorBlue = 1.0
         customGlowEnabled = true
         showDockIcon = false
+        preciseTime = false
     }
     
     // MARK: - Widget Reload
@@ -246,7 +260,7 @@ public class SettingsManager: ObservableObject {
             "clockFormat", "fontName", "showSeconds", "useUTC",
             "bcdSymbol", "symbol", "theme", "bcdFontSizeLarge",
             "customColorRed", "customColorGreen", "customColorBlue",
-            "customGlowEnabled", "showDockIcon"
+            "customGlowEnabled", "showDockIcon", "preciseTime"
         ]
         
         for key in keys {

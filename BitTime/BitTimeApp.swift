@@ -301,6 +301,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    @objc func togglePreciseTime(_ sender: NSMenuItem) {
+        settingsManager.preciseTime.toggle()
+        // Restart timers so the new tolerance value takes effect on the
+        // repeating tick.
+        clockUpdater.startTimers { [weak self] displayTime in
+            self?.paint(displayTime)
+        }
+    }
+
     @objc func changeBCDSymbol(_ sender: NSMenuItem) {
         if let symbol = sender.representedObject as? BCDSymbol {
             settingsManager.bcdSymbol = symbol

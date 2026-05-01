@@ -74,7 +74,7 @@ public class ClockUpdater {
 
         // In precise mode, use zero tolerance so the system fires the timer
         // exactly on schedule rather than coalescing it for power savings.
-        let tolerance: TimeInterval = Self.tickTolerance
+        let tolerance: TimeInterval = settingsManager.preciseTime ? 0 : Self.tickTolerance
 
         alignmentTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
             guard let self else { return }
