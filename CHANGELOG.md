@@ -1,3 +1,12 @@
+## [1.4.0](https://github.com/Clete2/BitTime/compare/v1.3.1...v1.4.0) (2026-05-01)
+
+
+### Features
+
+* add precise time menu toggle with tolerance control ([07c7ec2](https://github.com/Clete2/BitTime/commit/07c7ec2d70eee3b44fab144f8ee524326e76ec26))
+* **build:** produce drag-to-Applications DMG installer ([abcf6a2](https://github.com/Clete2/BitTime/commit/abcf6a20442dedaac067f76acbc7ce8027a3a4e1))
+* pause clock timer when screen is locked or all displays asleep ([c8547e1](https://github.com/Clete2/BitTime/commit/c8547e11cc53a1d5094efb9588dc3bfa98bbf32c))
+
 ## [1.3.1](https://github.com/Clete2/BitTime/compare/v1.3.0...v1.3.1) (2026-04-29)
 
 
