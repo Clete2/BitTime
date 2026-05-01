@@ -46,6 +46,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private let maxFlashCount = 12 // 6 complete cycles (on/off)
     private let flashInterval: TimeInterval = 0.3
 
+    // Display visibility tracking — pause the clock while nothing on screen
+    // can show it. Two independent reasons feed into a single paused state so
+    // the clock only resumes when both are clear (e.g. unlocked AND a display
+    // is awake).
+    private var workspaceObservers: [NSObjectProtocol] = []
+    private var distributedObservers: [NSObjectProtocol] = []
+    private var allScreensAsleep: Bool = false
+    private var screenLocked: Bool = false
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         settingsManager = SettingsManager()
         clockUpdater = ClockUpdater(settingsManager: settingsManager)
@@ -74,6 +83,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         clockUpdater.startTimers { [weak self] displayTime in
             self?.paint(displayTime)
         }
+
+        // Pause the clock when nothing on screen can show it (screen locked,
+        // or all displays asleep). Resume on unlock or when any display wakes.
+        registerDisplayVisibilityObservers()
         
         // Start Spotlight indexing
         spotlightManager.startIndexing()
@@ -87,8 +100,85 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationWillTerminate(_ notification: Notification) {
         stopIconFlash()
+        unregisterDisplayVisibilityObservers()
+        clockUpdater?.invalidateAllTimers()
         spotlightManager.stopIndexing()
         spotlightManager.indexStaticItems()
+    }
+
+    // MARK: - Display Visibility (pause/resume)
+
+    private func registerDisplayVisibilityObservers() {
+        let workspaceCenter = NSWorkspace.shared.notificationCenter
+
+        // All displays asleep → pause; any display wake → clear that reason.
+        workspaceObservers.append(
+            workspaceCenter.addObserver(
+                forName: NSWorkspace.screensDidSleepNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                self?.allScreensAsleep = true
+                self?.updateClockPauseState()
+            }
+        )
+        workspaceObservers.append(
+            workspaceCenter.addObserver(
+                forName: NSWorkspace.screensDidWakeNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                self?.allScreensAsleep = false
+                self?.updateClockPauseState()
+            }
+        )
+
+        // Screen lock / unlock. These distributed notification names are
+        // undocumented but stable since 10.6 and used in Apple sample code.
+        let distributedCenter = DistributedNotificationCenter.default()
+        distributedObservers.append(
+            distributedCenter.addObserver(
+                forName: Notification.Name("com.apple.screenIsLocked"),
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                self?.screenLocked = true
+                self?.updateClockPauseState()
+            }
+        )
+        distributedObservers.append(
+            distributedCenter.addObserver(
+                forName: Notification.Name("com.apple.screenIsUnlocked"),
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                self?.screenLocked = false
+                self?.updateClockPauseState()
+            }
+        )
+    }
+
+    private func unregisterDisplayVisibilityObservers() {
+        let workspaceCenter = NSWorkspace.shared.notificationCenter
+        for token in workspaceObservers {
+            workspaceCenter.removeObserver(token)
+        }
+        workspaceObservers.removeAll()
+
+        let distributedCenter = DistributedNotificationCenter.default()
+        for token in distributedObservers {
+            distributedCenter.removeObserver(token)
+        }
+        distributedObservers.removeAll()
+    }
+
+    private func updateClockPauseState() {
+        let shouldPause = allScreensAsleep || screenLocked
+        if shouldPause {
+            clockUpdater?.pause()
+        } else {
+            clockUpdater?.resume()
+        }
     }
     
     // MARK: - Icon Flash Animation

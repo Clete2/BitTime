@@ -15,6 +15,14 @@ public class ClockUpdater {
     private var timer: Timer?
     private var settingsManager: SettingsManager
 
+    /// Most recent update handler captured by `startTimers`. Retained so
+    /// `pause()`/`resume()` can re-arm without callers re-supplying it.
+    private var storedUpdateHandler: ((String) -> Void)?
+
+    /// True while timers are intentionally suppressed (e.g. screen locked or
+    /// all displays asleep). Distinct from the "never started" state.
+    public private(set) var isPaused: Bool = false
+
     public init(settingsManager: SettingsManager) {
         self.settingsManager = settingsManager
     }
@@ -24,14 +32,49 @@ public class ClockUpdater {
         alignmentTimer = nil
         timer?.invalidate()
         timer = nil
+        storedUpdateHandler = nil
+        isPaused = false
     }
 
     public func startTimers(updateHandler: @escaping (String) -> Void) {
         invalidateAllTimers()
+        storedUpdateHandler = updateHandler
+        isPaused = false
         updateClock(updateHandler: updateHandler)
+        scheduleAlignedTimers()
+    }
+
+    /// Stop firing ticks until `resume()` is called. Idempotent. Preserves the
+    /// stored update handler so `resume()` can re-arm the timers.
+    public func pause() {
+        guard !isPaused else { return }
+        guard storedUpdateHandler != nil else { return }
+        alignmentTimer?.invalidate()
+        alignmentTimer = nil
+        timer?.invalidate()
+        timer = nil
+        isPaused = true
+    }
+
+    /// Resume ticking after a `pause()`. Fires the handler immediately for a
+    /// fresh repaint, then realigns to the next second/minute boundary.
+    /// Idempotent and a no-op if not paused or never started.
+    public func resume() {
+        guard isPaused, let handler = storedUpdateHandler else { return }
+        isPaused = false
+        updateClock(updateHandler: handler)
+        scheduleAlignedTimers()
+    }
+
+    private func scheduleAlignedTimers() {
+        guard let updateHandler = storedUpdateHandler else { return }
 
         let interval: TimeInterval = settingsManager.showSeconds ? 1.0 : 60.0
         let delay = delayUntilNextBoundary(interval: interval) + Self.alignmentBump
+
+        // In precise mode, use zero tolerance so the system fires the timer
+        // exactly on schedule rather than coalescing it for power savings.
+        let tolerance: TimeInterval = Self.tickTolerance
 
         alignmentTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
             guard let self else { return }
@@ -40,7 +83,7 @@ public class ClockUpdater {
             let repeating = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
                 self?.updateClock(updateHandler: updateHandler)
             }
-            repeating.tolerance = Self.tickTolerance
+            repeating.tolerance = tolerance
             self.timer = repeating
         }
     }
