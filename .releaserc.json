@@ -37,12 +37,20 @@
       {
         "assets": [
           {
+            "path": "dist/BitTime-*.dmg",
+            "label": "BitTime installer"
+          },
+          {
+            "path": "dist/BitTime-*.dmg.sha256",
+            "label": "Installer SHA-256 checksum"
+          },
+          {
             "path": "dist/BitTime-*.zip",
-            "label": "BitTime.app (ad-hoc signed, macOS 13.5+)"
+            "label": "BitTime.app"
           },
           {
             "path": "dist/BitTime-*.zip.sha256",
-            "label": "SHA-256 checksum"
+            "label": "Zip SHA-256 checksum"
           }
         ]
       }
