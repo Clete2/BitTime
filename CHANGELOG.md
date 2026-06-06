@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/Clete2/BitTime/compare/v1.5.0...v1.5.1) (2026-06-06)
+
+
+### Bug Fixes
+
+* sync Theme.availableForCurrentPlatform helper from main repo ([ec7940e](https://github.com/Clete2/BitTime/commit/ec7940eba3060decd859dba4e23f722b7b6fb439))
+
 ## [1.5.0](https://github.com/Clete2/BitTime/compare/v1.4.0...v1.5.0) (2026-06-06)
 
 
