@@ -81,6 +81,21 @@ public enum Theme: String, CaseIterable {
 
     // MARK: - Adaptive Neon
 
+    /// Themes the current platform can meaningfully display in a picker.
+    ///
+    /// macOS gets all of them. iOS and watchOS drop only `.adaptiveNeon` —
+    /// there's no wallpaper sampler on those platforms, so picking it would
+    /// either show whatever color the user's Mac last published (random) or
+    /// fall back to Default (looks broken). The six new palette colors are
+    /// static, work on every platform, and stay available.
+    public static var availableForCurrentPlatform: [Theme] {
+        #if canImport(AppKit) && !targetEnvironment(macCatalyst)
+        return Theme.allCases
+        #else
+        return Theme.allCases.filter { $0 != .adaptiveNeon }
+        #endif
+    }
+
     /// The fixed candidate palette the [[adaptive-neon]] sampler picks from.
     /// All entries are themselves user-selectable Theme cases.
     public static let neonPalette: [Theme] = [
