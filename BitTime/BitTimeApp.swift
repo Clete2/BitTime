@@ -21,6 +21,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var menuBuilder: MenuBuilder!
     var spotlightManager: SpotlightManager!
     var launchAtLoginManager: LaunchAtLoginManager!
+    var wallpaperSampler: WallpaperSampler!
+    private var adaptiveNeonObserver: NSObjectProtocol?
+    private var adaptiveNeonFailObserver: NSObjectProtocol?
+    private var adaptiveNeonFailureAlertShown = false
     var firstLaunchCoordinator: FirstLaunchCoordinator!
 
     // Cached attributed string attributes to avoid rebuilding on every tick
@@ -87,7 +91,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Pause the clock when nothing on screen can show it (screen locked,
         // or all displays asleep). Resume on unlock or when any display wakes.
         registerDisplayVisibilityObservers()
-        
+
+        // Keep the Adaptive Neon cache fresh. Sampler writes its pick to
+        // sharedDefaults and posts a notification; we listen here to repaint.
+        // The sampler only runs while the user has Adaptive Neon selected —
+        // updateSamplerForCurrentTheme starts/stops it based on currentTheme.
+        wallpaperSampler = WallpaperSampler()
+        adaptiveNeonObserver = NotificationCenter.default.addObserver(
+            forName: Theme.adaptiveNeonDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handleAdaptiveNeonChange()
+        }
+        adaptiveNeonFailObserver = NotificationCenter.default.addObserver(
+            forName: Theme.adaptiveNeonDidFailNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handleAdaptiveNeonFailure()
+        }
+        updateSamplerForCurrentTheme()
+
         // Start Spotlight indexing
         spotlightManager.startIndexing()
         
@@ -101,9 +126,77 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         stopIconFlash()
         unregisterDisplayVisibilityObservers()
+        if let token = adaptiveNeonObserver {
+            NotificationCenter.default.removeObserver(token)
+            adaptiveNeonObserver = nil
+        }
+        if let token = adaptiveNeonFailObserver {
+            NotificationCenter.default.removeObserver(token)
+            adaptiveNeonFailObserver = nil
+        }
+        wallpaperSampler?.stop()
         clockUpdater?.invalidateAllTimers()
         spotlightManager.stopIndexing()
         spotlightManager.indexStaticItems()
+    }
+
+    // MARK: - Adaptive Neon
+
+    /// Starts the sampler iff the user currently has Adaptive Neon selected,
+    /// otherwise stops it. Both calls are idempotent so this is safe to call
+    /// after every theme mutation without tracking previous state. Keeps the
+    /// 60-second timer and wallpaper read off-CPU when the user isn't on
+    /// Adaptive Neon.
+    private func updateSamplerForCurrentTheme() {
+        if settingsManager.currentTheme == .adaptiveNeon {
+            wallpaperSampler?.start()
+        } else {
+            wallpaperSampler?.stop()
+        }
+    }
+
+    private func handleAdaptiveNeonChange() {
+        // Only the menu bar needs to reactively re-render — widgets are
+        // refreshed by the sampler via WidgetCenter.reloadAllTimelines.
+        // No-op for any other current theme; the cache moved, but the menu
+        // bar isn't reading it.
+        guard settingsManager.currentTheme == .adaptiveNeon else { return }
+        adaptiveNeonFailureAlertShown = false
+        cachedFontAttributes = nil
+        updateFont()
+        clockUpdater.updateClock { [weak self] displayTime in
+            self?.paint(displayTime)
+        }
+    }
+
+    /// Adaptive Neon couldn't read the current wallpaper (sandbox denies
+    /// reading wallpapers outside system locations like /System/Library/Desktop
+    /// Pictures). Revert the user to the default theme and tell them why.
+    /// No-op when the user isn't on Adaptive Neon — a silent failure for
+    /// background samples that don't affect what's on screen.
+    private func handleAdaptiveNeonFailure() {
+        guard settingsManager.currentTheme == .adaptiveNeon else { return }
+
+        settingsManager.currentTheme = .default
+        cachedFontAttributes = nil
+        updateFont()
+        clockUpdater.updateClock { [weak self] displayTime in
+            self?.paint(displayTime)
+        }
+        updateSamplerForCurrentTheme()
+
+        // Avoid spamming the alert if multiple failure notifications fire in
+        // quick succession (e.g. a space change followed by the 60s timer).
+        if adaptiveNeonFailureAlertShown { return }
+        adaptiveNeonFailureAlertShown = true
+
+        let alert = NSAlert()
+        alert.messageText = "Adaptive Neon couldn't read your wallpaper"
+        alert.informativeText = "BitTime runs in a sandbox and only has permission to read built-in macOS wallpapers (from /System/Library/Desktop Pictures). Adaptive Neon has been turned off and the theme has been reset to Default.\n\nIf you'd like Adaptive Neon to work, switch to a built-in macOS wallpaper and re-select Adaptive Neon from the Theme menu."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
     }
 
     // MARK: - Display Visibility (pause/resume)
@@ -349,8 +442,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             clockUpdater.updateClock { [weak self] displayTime in
                 self?.paint(displayTime)
             }
+            updateSamplerForCurrentTheme()
             if theme == .custom {
                 showColorPicker(sender)
+            }
+            if theme == .adaptiveNeon {
+                // Force a fresh sample so the user sees a current pick (or a
+                // failure alert) immediately. updateSamplerForCurrentTheme
+                // above also calls sampleNow indirectly via start() on the
+                // initial selection, but on re-selection (already running)
+                // start() is a no-op so we trigger explicitly.
+                adaptiveNeonFailureAlertShown = false
+                wallpaperSampler?.sampleNow()
             }
         }
     }
@@ -418,6 +521,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         clockUpdater.updateClock { [weak self] displayTime in
             self?.paint(displayTime)
         }
+        updateSamplerForCurrentTheme()
     }
     
     private func showLaunchAtLoginPrompt() -> Bool {

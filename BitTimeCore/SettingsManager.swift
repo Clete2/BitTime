@@ -26,7 +26,8 @@ public class SettingsManager: ObservableObject {
             "customColorRed": defaultCustomColorRed,
             "customColorGreen": 1.0,
             "customColorBlue": 1.0,
-            "customGlowEnabled": true
+            "customGlowEnabled": true,
+            Theme.adaptiveNeonPickedThemeKey: ""
         ])
         
         return defaults
