@@ -1,3 +1,10 @@
+## [1.5.0](https://github.com/Clete2/BitTime/compare/v1.4.0...v1.5.0) (2026-06-06)
+
+
+### Features
+
+* add Adaptive Neon theme and six new neon themes ([64e024f](https://github.com/Clete2/BitTime/commit/64e024f6864913fc73300021a9af2331d018c107))
+
 ## [1.4.0](https://github.com/Clete2/BitTime/compare/v1.3.1...v1.4.0) (2026-05-01)
 
 
