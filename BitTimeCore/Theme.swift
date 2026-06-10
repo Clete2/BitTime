@@ -43,7 +43,7 @@ public enum Theme: String, CaseIterable {
         case .electricPurple:
             return PlatformColor(red: 0.54, green: 0.17, blue: 0.89, alpha: 1.0)
         case .electricBlue:
-            return PlatformColor(red: 0.247, green: 0.0, blue: 1.0, alpha: 1.0)   // #3F00FF
+            return PlatformColor(red: 0.0, green: 0.0, blue: 0.6, alpha: 1.0)     // #000099
         case .electricCyan:
             return PlatformColor(red: 0.0, green: 0.941, blue: 1.0, alpha: 1.0)   // #00F0FF
         case .lime:
