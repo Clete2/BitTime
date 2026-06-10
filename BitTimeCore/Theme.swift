@@ -9,7 +9,6 @@ public typealias PlatformColor = UIColor
 
 public enum Theme: String, CaseIterable {
     case `default` = "Default"
-    case adaptiveNeon = "Adaptive Neon"
     case electricBlue = "Electric Blue"
     case electricCyan = "Electric Cyan"
     case electricPurple = "Electric Purple"
@@ -55,8 +54,6 @@ public enum Theme: String, CaseIterable {
             return PlatformColor(red: 1.0, green: 0.431, blue: 0.0, alpha: 1.0)   // #FF6E00
         case .neonYellow:
             return PlatformColor(red: 1.0, green: 1.0, blue: 0.0, alpha: 1.0)     // #FFFF00
-        case .adaptiveNeon:
-            return Theme.adaptiveNeonResolved().textColor
         case .custom:
             let defaults = SettingsManager.sharedDefaults
             let red = CGFloat(defaults.double(forKey: "customColorRed"))
@@ -71,84 +68,15 @@ public enum Theme: String, CaseIterable {
         case .default:
             return false
         case .terminalGreen, .terminalAmber, .terminalBlue, .neonPink, .electricPurple,
-             .electricBlue, .electricCyan, .lime, .magenta, .neonOrange, .neonYellow,
-             .adaptiveNeon:
+             .electricBlue, .electricCyan, .lime, .magenta, .neonOrange, .neonYellow:
             return true
         case .custom:
             return SettingsManager.sharedDefaults.bool(forKey: "customGlowEnabled")
         }
     }
 
-    // MARK: - Adaptive Neon
-
     /// Themes the current platform can meaningfully display in a picker.
-    ///
-    /// macOS gets all of them. iOS and watchOS drop only `.adaptiveNeon` —
-    /// there's no wallpaper sampler on those platforms, so picking it would
-    /// either show whatever color the user's Mac last published (random) or
-    /// fall back to Default (looks broken). The six new palette colors are
-    /// static, work on every platform, and stay available.
     public static var availableForCurrentPlatform: [Theme] {
-        #if canImport(AppKit) && !targetEnvironment(macCatalyst)
         return Theme.allCases
-        #else
-        return Theme.allCases.filter { $0 != .adaptiveNeon }
-        #endif
-    }
-
-    /// The fixed candidate palette the [[adaptive-neon]] sampler picks from.
-    /// All entries are themselves user-selectable Theme cases.
-    public static let neonPalette: [Theme] = [
-        .neonPink,
-        .electricCyan,
-        .lime,
-        .magenta,
-        .neonYellow,
-        .electricBlue,
-        .neonOrange,
-        .terminalGreen,
-        .electricPurple
-    ]
-
-    /// UserDefaults key holding the rawValue of the palette Theme the sampler
-    /// most recently picked. Empty / missing → resolve falls back to `.default`.
-    public static let adaptiveNeonPickedThemeKey = "adaptiveNeonPickedTheme"
-
-    /// Name of the notification posted when the sampler writes a new pick.
-    public static let adaptiveNeonDidChangeNotification = Notification.Name("adaptiveNeonDidChange")
-
-    /// Posted when the sampler attempts to read the wallpaper file and fails
-    /// (typically because the user's wallpaper is in a sandboxed-inaccessible
-    /// location like `~/Pictures` and the app has no entitlement for it).
-    /// AppDelegate uses this to revert Adaptive Neon and inform the user.
-    public static let adaptiveNeonDidFailNotification = Notification.Name("adaptiveNeonDidFail")
-
-    /// Resolves Adaptive Neon to whichever palette Theme is currently cached
-    /// in sharedDefaults. Falls back to `.default` when the cache is empty
-    /// (e.g. widgets running before the Mac sampler has ever produced a value).
-    public static func adaptiveNeonResolved() -> Theme {
-        let name = SettingsManager.sharedDefaults.string(forKey: adaptiveNeonPickedThemeKey) ?? ""
-        guard let picked = Theme(rawValue: name), neonPalette.contains(picked) else {
-            return .default
-        }
-        return picked
-    }
-
-    // MARK: - WCAG contrast
-
-    /// Relative luminance per WCAG 2.x, computed from sRGB components.
-    public static func relativeLuminance(red: Double, green: Double, blue: Double) -> Double {
-        func linearize(_ c: Double) -> Double {
-            return c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
-        }
-        return 0.2126 * linearize(red) + 0.7152 * linearize(green) + 0.0722 * linearize(blue)
-    }
-
-    /// WCAG contrast ratio between two relative luminances. Range 1.0 (no
-    /// contrast) – 21.0 (black on white).
-    public static func contrastRatio(_ l1: Double, _ l2: Double) -> Double {
-        let lighter = max(l1, l2)
-        let darker = min(l1, l2)
-        return (lighter + 0.05) / (darker + 0.05)
     }
 }

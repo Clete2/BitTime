@@ -168,9 +168,7 @@ class MenuBuilder: NSObject, NSMenuDelegate {
         let themeMenuItem = NSMenuItem(title: "Theme", action: nil, keyEquivalent: "")
         let themeSubmenu = NSMenu(title: "Theme")
 
-        // Static themes first (alphabetical from Theme.allCases, with Default
-        // already top). Adaptive Neon and Custom get special placement below.
-        for theme in Theme.allCases where theme != .custom && theme != .adaptiveNeon {
+        for theme in Theme.allCases where theme != .custom {
             let menuItem = NSMenuItem(title: theme.rawValue, action: #selector(delegate?.changeTheme(_:)), keyEquivalent: "")
             menuItem.target = delegate
             menuItem.representedObject = theme
@@ -182,29 +180,6 @@ class MenuBuilder: NSObject, NSMenuDelegate {
         }
 
         themeSubmenu.addItem(NSMenuItem.separator())
-
-        // Adaptive Neon — separator above visually groups it with Custom
-        // (the two "special" entries that aren't fixed colors).
-        let adaptiveTitle = "\(Theme.adaptiveNeon.rawValue) (hover for explanation)"
-        let adaptiveItem = NSMenuItem(title: adaptiveTitle, action: #selector(delegate?.changeTheme(_:)), keyEquivalent: "")
-        adaptiveItem.target = delegate
-        adaptiveItem.representedObject = Theme.adaptiveNeon
-        adaptiveItem.image = swatch(for: .adaptiveNeon)
-        adaptiveItem.toolTip = "Automatically picks a neon color from a curated palette that has the highest contrast against the average color of the area behind the menu bar. Updates when you change spaces, change wallpapers, or move between displays.\n\nOnly works for built-in macOS wallpapers (from /System/Library/Desktop Pictures). Custom wallpapers from ~/Pictures or ~/Desktop cannot be read because BitTime runs in a sandbox."
-        if settingsManager.currentTheme == .adaptiveNeon {
-            adaptiveItem.state = .on
-        }
-        themeSubmenu.addItem(adaptiveItem)
-
-        // Disabled "Current: X" sibling under Adaptive Neon, shown only
-        // when the sampler has actually produced a pick. NSMenuItem.subtitle
-        // would be cleaner but requires macOS 14.4+; deployment target is 13.5.
-        let resolved = Theme.adaptiveNeonResolved()
-        if resolved != .default {
-            let currentItem = NSMenuItem(title: "    Current: \(resolved.rawValue)", action: nil, keyEquivalent: "")
-            currentItem.isEnabled = false
-            themeSubmenu.addItem(currentItem)
-        }
 
         let customItem = NSMenuItem(title: Theme.custom.rawValue, action: #selector(delegate?.changeTheme(_:)), keyEquivalent: "")
         customItem.target = delegate
@@ -225,11 +200,9 @@ class MenuBuilder: NSObject, NSMenuDelegate {
     }
 
     /// Renders a small filled-circle swatch in the given theme's color, for
-    /// use as an NSMenuItem.image. Returns nil for Adaptive Neon when no
-    /// sample has been produced yet — the row's image column stays empty so
-    /// the menu doesn't lie about what color Adaptive Neon will pick.
-    /// All swatches get a thin black outline so they're delineated against
-    /// the popup menu's background and the white Default swatch stays visible.
+    /// use as an NSMenuItem.image. All swatches get a thin black outline so
+    /// they're delineated against the popup menu's background and the white
+    /// Default swatch stays visible.
     private func swatch(for theme: Theme) -> NSImage? {
         guard let color = swatchColor(for: theme) else { return nil }
         let size = NSSize(width: 12, height: 12)
@@ -253,9 +226,6 @@ class MenuBuilder: NSObject, NSMenuDelegate {
             // even on light-mode systems. White-on-white in the popup menu
             // is solved by the outline in swatch(for:).
             return .white
-        case .adaptiveNeon:
-            let resolved = Theme.adaptiveNeonResolved()
-            return resolved == .default ? nil : resolved.textColor
         default:
             return theme.textColor
         }
