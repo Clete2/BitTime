@@ -1,3 +1,10 @@
+## [1.6.0](https://github.com/Clete2/BitTime/compare/v1.5.1...v1.6.0) (2026-06-10)
+
+
+### Features
+
+* remove Adaptive Neon theme ([7694187](https://github.com/Clete2/BitTime/commit/7694187e0968043e9349f66cdf99510c2868f0ae))
+
 ## [1.5.1](https://github.com/Clete2/BitTime/compare/v1.5.0...v1.5.1) (2026-06-06)
 
 
