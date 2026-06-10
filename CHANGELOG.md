@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/Clete2/BitTime/compare/v1.6.0...v1.6.1) (2026-06-10)
+
+
+### Bug Fixes
+
+* correct Electric Blue color (was rendering as purple) ([4116817](https://github.com/Clete2/BitTime/commit/4116817d16d64d6cd7a14c446093248655147023)), closes [#3F00](https://github.com/Clete2/BitTime/issues/3F00) [#000099](https://github.com/Clete2/BitTime/issues/000099)
+
 ## [1.6.0](https://github.com/Clete2/BitTime/compare/v1.5.1...v1.6.0) (2026-06-10)
 
 
